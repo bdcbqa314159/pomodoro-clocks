@@ -44,6 +44,17 @@
   .dot.on { background: var(--accent); }
   .hint { margin-top: 20px; font-size: 12px; color: var(--dim); }
   body.break { --accent: var(--accent-break); }
+
+  details { margin-top: 18px; font-size: 13px; color: var(--dim); }
+  summary { cursor: pointer; letter-spacing: .1em; text-transform: uppercase; font-size: 11px; }
+  summary::-webkit-details-marker { display: none; }
+  .settings { display: grid; gap: 10px; margin-top: 16px; }
+  .settings label { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .settings input {
+    font: inherit; width: 72px; text-align: center; color: var(--fg);
+    background: #ffffff10; border: 1px solid #ffffff1a; border-radius: 8px; padding: 6px 4px;
+  }
+  .settings input:focus { outline: 1px solid var(--accent); }
 </style>
 
 <main>
@@ -66,21 +77,31 @@
 
   <div class="dots" id="dots"></div>
   <div class="hint">space — start / pause &nbsp;·&nbsp; r — reset</div>
+
+  <details>
+    <summary>Settings</summary>
+    <div class="settings">
+      <label>Focus <input type="number" id="s-focus"  min="1" max="180" step="1"></label>
+      <label>Short break <input type="number" id="s-short"  min="1" max="180" step="1"></label>
+      <label>Long break <input type="number" id="s-long"   min="1" max="180" step="1"></label>
+      <label>Rounds <input type="number" id="s-rounds" min="1" max="12"  step="1"></label>
+    </div>
+  </details>
 </main>
 
 <script>
-// ponytail: durations are constants. Add a settings panel when you actually want 50/10.
 const MIN = 60;
-const PHASES = {
-  focus:  { label: "Focus",      secs: 25 * MIN },
-  short:  { label: "Short break", secs:  5 * MIN },
-  long:   { label: "Long break",  secs: 15 * MIN },
-};
-const ROUNDS = 4; // focus blocks before a long break
+const LABELS = { focus: "Focus", short: "Short break", long: "Long break" };
+
+// minutes per phase + focus blocks before a long break
+const cfg = { focus: 25, short: 5, long: 15, rounds: 4 };
+Object.assign(cfg, JSON.parse(localStorage.pomodoro || "{}"));
+
+const secs = p => cfg[p] * MIN;
 
 let phase = "focus";
 let done = 0;              // completed focus blocks in this set
-let remaining = PHASES[phase].secs;
+let remaining = secs(phase);
 let deadline = null;       // ms timestamp; null when paused
 
 const $ = id => document.getElementById(id);
@@ -89,20 +110,20 @@ const CIRC = 2 * Math.PI * 45;
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 // which phase follows the current one
-const nextPhase = (cur, completed) =>
-  cur !== "focus" ? "focus" : (completed % ROUNDS === 0 ? "long" : "short");
+const nextPhase = (cur, completed, rounds = cfg.rounds) =>
+  cur !== "focus" ? "focus" : (completed % rounds === 0 ? "long" : "short");
 
 function render() {
-  const total = PHASES[phase].secs;
+  const total = secs(phase);
   const left = Math.max(0, remaining);
   $("time").textContent = fmt(Math.ceil(left));
-  $("phase").textContent = PHASES[phase].label;
+  $("phase").textContent = LABELS[phase];
   $("prog").style.strokeDashoffset = CIRC * (1 - left / total);
   $("toggle").textContent = deadline ? "Pause" : (left < total ? "Resume" : "Start");
   document.body.classList.toggle("break", phase !== "focus");
-  document.title = `${fmt(Math.ceil(left))} · ${PHASES[phase].label}`;
-  $("dots").innerHTML = Array.from({ length: ROUNDS },
-    (_, i) => `<div class="dot ${i < done % ROUNDS || (done && done % ROUNDS === 0) ? "on" : ""}"></div>`).join("");
+  document.title = `${fmt(Math.ceil(left))} · ${LABELS[phase]}`;
+  $("dots").innerHTML = Array.from({ length: cfg.rounds },
+    (_, i) => `<div class="dot ${i < done % cfg.rounds || (done && done % cfg.rounds === 0) ? "on" : ""}"></div>`).join("");
 }
 
 // ponytail: deadline-based, not a decrementing counter — setInterval drifts and
@@ -120,7 +141,7 @@ function advance() {
   chime(phase === "focus");
   if (phase === "focus") done++;
   phase = nextPhase(phase, done);
-  remaining = PHASES[phase].secs;
+  remaining = secs(phase);
   deadline = performance.now() + remaining * 1000;  // auto-continue
 }
 
@@ -129,12 +150,12 @@ function toggle() {
   else { deadline = performance.now() + remaining * 1000; blip(); }
 }
 
-function reset() { deadline = null; remaining = PHASES[phase].secs; }
+function reset() { deadline = null; remaining = secs(phase); }
 
 function skip() {
   if (phase === "focus") done++;
   phase = nextPhase(phase, done);
-  remaining = PHASES[phase].secs;
+  remaining = secs(phase);
   if (deadline) deadline = performance.now() + remaining * 1000;
 }
 
@@ -156,10 +177,28 @@ const blip  = () => tone(880, 0, 0.12, 0.1);
 const chime = up => [0, .16, .32].forEach((d, i) =>
   tone((up ? [523, 659, 784] : [784, 659, 523])[i], d, 1.1));
 
+// Settings. `min`/`max` on the inputs only guard the spinners — a typed value
+// still needs clamping before it reaches the timer.
+const LIMITS = { focus: 180, short: 180, long: 180, rounds: 12 };
+const clamp = (n, max) => Math.min(Math.max(Math.round(n), 1), max);
+
+for (const key of Object.keys(cfg)) {
+  const input = $("s-" + key);
+  input.value = cfg[key];
+  input.onchange = () => {
+    const n = Number(input.value);
+    if (!Number.isFinite(n) || input.value === "") return void (input.value = cfg[key]);  // blank / junk: revert
+    cfg[key] = input.value = clamp(n, LIMITS[key]);
+    localStorage.pomodoro = JSON.stringify(cfg);
+    if (key === phase) reset();   // retime the phase you're sitting in
+  };
+}
+
 $("toggle").onclick = toggle;
 $("reset").onclick = reset;
 $("skip").onclick = skip;
 onkeydown = e => {
+  if (e.target.tagName === "INPUT") return;   // typing in settings, not driving the clock
   if (e.code === "Space") { e.preventDefault(); toggle(); }
   if (e.key === "r") reset();
 };
@@ -172,10 +211,16 @@ if (location.hash === "#test") {
   console.assert(fmt(1500) === "25:00", "fmt 1500");
   console.assert(fmt(59) === "0:59", "fmt 59");
   console.assert(fmt(0) === "0:00", "fmt 0");
-  console.assert(nextPhase("focus", 1) === "short", "1st focus -> short");
-  console.assert(nextPhase("focus", 4) === "long", "4th focus -> long");
-  console.assert(nextPhase("short", 1) === "focus", "break -> focus");
-  console.assert(nextPhase("long", 4) === "focus", "long -> focus");
+  console.assert(nextPhase("focus", 1, 4) === "short", "1st focus -> short");
+  console.assert(nextPhase("focus", 4, 4) === "long", "4th focus -> long");
+  console.assert(nextPhase("focus", 2, 2) === "long", "rounds=2 honoured");
+  console.assert(nextPhase("short", 1, 4) === "focus", "break -> focus");
+  console.assert(nextPhase("long", 4, 4) === "focus", "long -> focus");
+
+  console.assert(clamp(0, 180) === 1, "0 clamps up to 1");
+  console.assert(clamp(-5, 180) === 1, "negative clamps up to 1");
+  console.assert(clamp(999, 180) === 180, "over max clamps down");
+  console.assert(clamp(25.6, 180) === 26, "fractional rounds");
   console.log("self-check done");
 }
 </script>
