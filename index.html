@@ -1,0 +1,181 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pomodoro</title>
+<style>
+  :root {
+    --bg: #10131a; --fg: #e8ecf4; --dim: #7d879c;
+    --accent: #ff6b5b;          /* focus */
+    --accent-break: #45c9a5;    /* break */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: radial-gradient(120% 120% at 50% 0%, #1b2130 0%, var(--bg) 60%);
+    color: var(--fg); font: 400 16px/1.4 ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none;
+    transition: background .6s;
+  }
+  main { text-align: center; padding: 24px; }
+  .phase {
+    letter-spacing: .35em; text-transform: uppercase; font-size: 13px;
+    color: var(--dim); margin-bottom: 20px;
+  }
+  .dial { position: relative; width: min(76vw, 340px); aspect-ratio: 1; margin: 0 auto; }
+  svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  circle { fill: none; stroke-linecap: round; }
+  .track { stroke: #ffffff14; stroke-width: 6; }
+  .prog  { stroke: var(--accent); stroke-width: 10; transition: stroke .6s; filter: drop-shadow(0 0 12px var(--accent)); }
+  .time {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: clamp(48px, 15vw, 76px); font-weight: 300; font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+  }
+  .controls { margin-top: 28px; display: flex; gap: 12px; justify-content: center; }
+  button {
+    font: inherit; color: var(--fg); background: #ffffff10; border: 1px solid #ffffff1a;
+    padding: 11px 26px; border-radius: 999px; cursor: pointer; transition: background .15s, transform .1s;
+  }
+  button:hover { background: #ffffff1c; }
+  button:active { transform: scale(.96); }
+  button.primary { background: var(--accent); border-color: transparent; color: #12151c; font-weight: 600; min-width: 128px; }
+  .dots { margin-top: 22px; display: flex; gap: 9px; justify-content: center; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #ffffff20; transition: background .3s; }
+  .dot.on { background: var(--accent); }
+  .hint { margin-top: 20px; font-size: 12px; color: var(--dim); }
+  body.break { --accent: var(--accent-break); }
+</style>
+
+<main>
+  <div class="phase" id="phase">Focus</div>
+
+  <div class="dial">
+    <svg viewBox="0 0 100 100">
+      <circle class="track" cx="50" cy="50" r="45"></circle>
+      <circle class="prog"  cx="50" cy="50" r="45" id="prog"
+              stroke-dasharray="282.74" stroke-dashoffset="0"></circle>
+    </svg>
+    <div class="time" id="time">25:00</div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="toggle">Start</button>
+    <button id="reset">Reset</button>
+    <button id="skip">Skip</button>
+  </div>
+
+  <div class="dots" id="dots"></div>
+  <div class="hint">space — start / pause &nbsp;·&nbsp; r — reset</div>
+</main>
+
+<script>
+// ponytail: durations are constants. Add a settings panel when you actually want 50/10.
+const MIN = 60;
+const PHASES = {
+  focus:  { label: "Focus",      secs: 25 * MIN },
+  short:  { label: "Short break", secs:  5 * MIN },
+  long:   { label: "Long break",  secs: 15 * MIN },
+};
+const ROUNDS = 4; // focus blocks before a long break
+
+let phase = "focus";
+let done = 0;              // completed focus blocks in this set
+let remaining = PHASES[phase].secs;
+let deadline = null;       // ms timestamp; null when paused
+
+const $ = id => document.getElementById(id);
+const CIRC = 2 * Math.PI * 45;
+
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+// which phase follows the current one
+const nextPhase = (cur, completed) =>
+  cur !== "focus" ? "focus" : (completed % ROUNDS === 0 ? "long" : "short");
+
+function render() {
+  const total = PHASES[phase].secs;
+  const left = Math.max(0, remaining);
+  $("time").textContent = fmt(Math.ceil(left));
+  $("phase").textContent = PHASES[phase].label;
+  $("prog").style.strokeDashoffset = CIRC * (1 - left / total);
+  $("toggle").textContent = deadline ? "Pause" : (left < total ? "Resume" : "Start");
+  document.body.classList.toggle("break", phase !== "focus");
+  document.title = `${fmt(Math.ceil(left))} · ${PHASES[phase].label}`;
+  $("dots").innerHTML = Array.from({ length: ROUNDS },
+    (_, i) => `<div class="dot ${i < done % ROUNDS || (done && done % ROUNDS === 0) ? "on" : ""}"></div>`).join("");
+}
+
+// ponytail: deadline-based, not a decrementing counter — setInterval drifts and
+// background tabs get throttled to 1Hz or worse.
+function tick() {
+  if (deadline) {
+    remaining = (deadline - performance.now()) / 1000;
+    if (remaining <= 0) advance();
+  }
+  render();
+  requestAnimationFrame(tick);
+}
+
+function advance() {
+  chime(phase === "focus");
+  if (phase === "focus") done++;
+  phase = nextPhase(phase, done);
+  remaining = PHASES[phase].secs;
+  deadline = performance.now() + remaining * 1000;  // auto-continue
+}
+
+function toggle() {
+  if (deadline) { remaining = (deadline - performance.now()) / 1000; deadline = null; }
+  else { deadline = performance.now() + remaining * 1000; blip(); }
+}
+
+function reset() { deadline = null; remaining = PHASES[phase].secs; }
+
+function skip() {
+  if (phase === "focus") done++;
+  phase = nextPhase(phase, done);
+  remaining = PHASES[phase].secs;
+  if (deadline) deadline = performance.now() + remaining * 1000;
+}
+
+// ponytail: synthesised tones, no audio files to host or preload.
+let ac;
+function tone(freq, at, dur, gain = 0.22) {
+  ac ||= new AudioContext();
+  const t = ac.currentTime + at;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = "sine"; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(t); o.stop(t + dur);
+}
+const blip  = () => tone(880, 0, 0.12, 0.1);
+// rising triad ending focus, falling one ending a break
+const chime = up => [0, .16, .32].forEach((d, i) =>
+  tone((up ? [523, 659, 784] : [784, 659, 523])[i], d, 1.1));
+
+$("toggle").onclick = toggle;
+$("reset").onclick = reset;
+$("skip").onclick = skip;
+onkeydown = e => {
+  if (e.code === "Space") { e.preventDefault(); toggle(); }
+  if (e.key === "r") reset();
+};
+
+render();
+tick();
+
+// ponytail: one self-check for the only non-obvious logic. Open index.html#test
+if (location.hash === "#test") {
+  console.assert(fmt(1500) === "25:00", "fmt 1500");
+  console.assert(fmt(59) === "0:59", "fmt 59");
+  console.assert(fmt(0) === "0:00", "fmt 0");
+  console.assert(nextPhase("focus", 1) === "short", "1st focus -> short");
+  console.assert(nextPhase("focus", 4) === "long", "4th focus -> long");
+  console.assert(nextPhase("short", 1) === "focus", "break -> focus");
+  console.assert(nextPhase("long", 4) === "focus", "long -> focus");
+  console.log("self-check done");
+}
+</script>

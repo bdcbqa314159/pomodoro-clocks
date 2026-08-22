@@ -1,0 +1,5 @@
+# ponytail: no build, no deps — only OS/editor cruft can show up here.
+.DS_Store
+.vscode/
+.idea/
+*.swp
