@@ -17,10 +17,20 @@ cmake --preset release && cmake --build --preset release
 | `space` | start / pause |
 | `r` | reset the current phase |
 | `s` | skip to the next phase |
+| `c` | settings (arrows to select/adjust, `esc` to close) |
 | `q` / `esc` | quit |
 
-Durations are the defaults (25 / 5 / 15, long break every 4). The core supports changing them;
-the TUI has no settings screen yet.
+Defaults are 25 / 5 / 15 with a long break every 4. Changing them in the settings screen writes
+`$XDG_CONFIG_HOME/pomodoro/config` (or `~/.config/pomodoro/config`) on close:
+
+```
+focus=25
+short=5
+long=15
+rounds=4
+```
+
+Hand-editing it is fine — values are clamped and anything unparseable falls back to the default.
 
 ## Build & test
 
@@ -38,6 +48,7 @@ FTXUI and GoogleTest.
 ```
 src/pomodoro.hpp     timer core — pure logic, no I/O, no clock reads
 src/pomodoro.cpp     implementation
+src/config_io.*      config file read/write — parsing half is pure and tested
 src/main.cpp         FTXUI terminal app — the only place that reads a clock
 tests/               GoogleTest, fake time
 docs/                milestone notes

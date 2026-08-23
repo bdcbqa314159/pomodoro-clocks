@@ -16,6 +16,11 @@ struct Config {
   int rounds = 4;  // focus blocks before a long break
 };
 
+// Bounds every path into Config must respect: the settings screen, the config
+// file parser, and anything else that sets a duration.
+inline constexpr int kMaxMinutes = 180;
+inline constexpr int kMaxRounds = 12;
+
 using Clock = std::chrono::steady_clock;
 using TimePoint = Clock::time_point;
 using Duration = std::chrono::milliseconds;

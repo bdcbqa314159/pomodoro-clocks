@@ -1,3 +1,4 @@
+#include "config_io.hpp"
 #include "pomodoro.hpp"
 
 #include <ftxui/component/component.hpp>
@@ -83,10 +84,11 @@ void alert(const char* title, const char* body) {
 }  // namespace
 
 int main() {
-  pomo::Timer timer;
+  pomo::Timer timer{pomo::load_config()};
   auto screen = ScreenInteractive::TerminalOutput();
 
   bool settings_open = false;
+  bool saved_ok = true;
   int field = 0;  // index into kFields
 
   struct Field {
@@ -98,10 +100,10 @@ int main() {
   // ponytail: ±/arrow stepping, not text entry — no cursor, no parse, no partial
   // state, and clamp_minutes already exists to bound it.
   static const Field kFields[] = {
-      {"Focus", &pomo::Config::focus_min, 180, "min"},
-      {"Short break", &pomo::Config::short_min, 180, "min"},
-      {"Long break", &pomo::Config::long_min, 180, "min"},
-      {"Rounds", &pomo::Config::rounds, 12, ""},
+      {"Focus", &pomo::Config::focus_min, pomo::kMaxMinutes, "min"},
+      {"Short break", &pomo::Config::short_min, pomo::kMaxMinutes, "min"},
+      {"Long break", &pomo::Config::long_min, pomo::kMaxMinutes, "min"},
+      {"Rounds", &pomo::Config::rounds, pomo::kMaxRounds, ""},
   };
   constexpr int kFieldCount = static_cast<int>(std::size(kFields));
 
@@ -168,9 +170,14 @@ int main() {
                  vbox(std::move(rows)),
                  text("") | size(HEIGHT, EQUAL, 1),
                  text("up/down select   left/right adjust   esc close") | dim | hcenter,
+                 text(pomo::config_path().string()) | dim | hcenter,
              }) |
              border | size(WIDTH, EQUAL, 52) | center;  // wide enough for the hint line
     }
+
+    Element save_warning = saved_ok ? filler() | size(HEIGHT, EQUAL, 0)
+                                    : text("could not write " + pomo::config_path().string()) |
+                                          color(Color::Red) | hcenter;
 
     return vbox({
                text(label_of(timer.phase())) | bold | color(accent) | hcenter,
@@ -184,6 +191,7 @@ int main() {
                text(timer.running() ? "running" : "paused") | dim | hcenter,
                text("") | size(HEIGHT, EQUAL, 1),
                text("space pause   r reset   s skip   c settings   q quit") | dim | hcenter,
+               std::move(save_warning),
            }) |
            border | center;
   });
@@ -204,6 +212,9 @@ int main() {
         adjust(+1);
       } else if (e == Event::Escape || e == Event::Return || e == Event::Character('c')) {
         settings_open = false;
+        // Once on close, not once per arrow press. If the write fails (read-only
+        // $HOME) the app carries on with the settings applied in memory.
+        saved_ok = pomo::save_config(timer.config());
       }
       return true;
     }

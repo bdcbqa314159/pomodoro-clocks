@@ -29,7 +29,9 @@ set(FTXUI_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(FTXUI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(ftxui)
 
-add_executable(pomodoro src/main.cpp)
+# config_io is compiled into the app and the tests directly rather than into
+# pomodoro_core — the core stays I/O-free, and the parser still gets tested.
+add_executable(pomodoro src/main.cpp src/config_io.cpp)
 # ftxui::component transitively brings dom + screen; naming all three makes the
 # linker warn about duplicates.
 target_link_libraries(pomodoro PRIVATE pomodoro_core ftxui::component)
@@ -45,7 +47,7 @@ if(POMODORO_BUILD_TESTS)
   FetchContent_MakeAvailable(googletest)
 
   enable_testing()
-  add_executable(pomodoro_tests tests/pomodoro_test.cpp)
+  add_executable(pomodoro_tests tests/pomodoro_test.cpp tests/config_io_test.cpp src/config_io.cpp)
   target_link_libraries(pomodoro_tests PRIVATE pomodoro_core GTest::gtest_main)
 
   include(GoogleTest)
