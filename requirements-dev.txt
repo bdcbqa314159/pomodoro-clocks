@@ -1,0 +1,4 @@
+# Pinned local dev tools — same versions CI enforces. Never install globally.
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+#   .venv/bin/clang-format -i $(git ls-files '*.hpp' '*.cpp')
+clang-format==18.1.8

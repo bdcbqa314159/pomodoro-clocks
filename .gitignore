@@ -1,5 +1,25 @@
-# ponytail: no build, no deps — only OS/editor cruft can show up here.
+# OS / editor
 .DS_Store
 .vscode/
+.vs/
 .idea/
 *.swp
+
+# build + generated
+build/
+compile_commands.json
+.cache/
+CMakeUserPresets.json
+
+# loose compiled artifacts
+*.o
+*.a
+*.dylib
+*.dSYM/
+*.profraw
+*.profdata
+
+# personal / local tooling
+.venv/
+.claude/
+CLAUDE.local.md
