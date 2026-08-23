@@ -17,12 +17,25 @@ add_library(pomodoro_core src/pomodoro.cpp)
 target_compile_features(pomodoro_core PUBLIC cxx_std_20)
 target_include_directories(pomodoro_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# ponytail: no app target yet — the FTXUI dependency lands with milestone 2,
-# not before. A fast configure while you're iterating on the core is worth more.
+include(FetchContent)
+
+FetchContent_Declare(
+  ftxui
+  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
+  GIT_TAG v5.0.0
+  GIT_SHALLOW TRUE)
+set(FTXUI_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(FTXUI_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(FTXUI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(ftxui)
+
+add_executable(pomodoro src/main.cpp)
+# ftxui::component transitively brings dom + screen; naming all three makes the
+# linker warn about duplicates.
+target_link_libraries(pomodoro PRIVATE pomodoro_core ftxui::component)
 
 option(POMODORO_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
 if(POMODORO_BUILD_TESTS)
-  include(FetchContent)
   FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
