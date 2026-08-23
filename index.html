@@ -138,16 +138,34 @@ function tick() {
 }
 
 function advance() {
-  chime(phase === "focus");
-  if (phase === "focus") done++;
-  phase = nextPhase(phase, done);
+  const ended = phase;
+  chime(ended === "focus");
+  if (ended === "focus") done++;
+  phase = nextPhase(ended, done);
   remaining = secs(phase);
   deadline = performance.now() + remaining * 1000;  // auto-continue
+  notify(ended === "focus" ? "Focus done" : "Break over",
+         `${LABELS[phase]} — ${cfg[phase]} min — started.`);
+}
+
+// ponytail: only when the tab is hidden — if you're looking at the ring, the
+// chime is enough. Misses the side-by-side-window case; document.hidden can't see it.
+function notify(title, body) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (!document.hidden) return;
+  // silent — our own chime already played; tag — replace, don't stack up a queue
+  const n = new Notification(title, { body, tag: "pomodoro", silent: true });
+  n.onclick = () => { window.focus(); n.close(); };
 }
 
 function toggle() {
   if (deadline) { remaining = (deadline - performance.now()) / 1000; deadline = null; }
-  else { deadline = performance.now() + remaining * 1000; blip(); }
+  else {
+    deadline = performance.now() + remaining * 1000;
+    blip();
+    // ask on the first Start — a gesture. Browsers penalise on-load permission prompts.
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+  }
 }
 
 function reset() { deadline = null; remaining = secs(phase); }
