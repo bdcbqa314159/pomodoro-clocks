@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 #include <string>
 #include <thread>
 #include <vector>
@@ -85,6 +86,32 @@ int main() {
   pomo::Timer timer;
   auto screen = ScreenInteractive::TerminalOutput();
 
+  bool settings_open = false;
+  int field = 0;  // index into kFields
+
+  struct Field {
+    const char* label;
+    int pomo::Config::*member;
+    int max;
+    const char* unit;
+  };
+  // ponytail: ±/arrow stepping, not text entry — no cursor, no parse, no partial
+  // state, and clamp_minutes already exists to bound it.
+  static const Field kFields[] = {
+      {"Focus", &pomo::Config::focus_min, 180, "min"},
+      {"Short break", &pomo::Config::short_min, 180, "min"},
+      {"Long break", &pomo::Config::long_min, 180, "min"},
+      {"Rounds", &pomo::Config::rounds, 12, ""},
+  };
+  constexpr int kFieldCount = static_cast<int>(std::size(kFields));
+
+  auto adjust = [&](int delta) {
+    pomo::Config cfg = timer.config();
+    const Field& f = kFields[field];
+    cfg.*(f.member) = pomo::clamp_minutes(cfg.*(f.member) + delta, f.max);
+    timer.set_config(cfg);  // retimes (and stops) only if the current phase changed length
+  };
+
   auto renderer = Renderer([&] {
     const int ended = timer.tick(pomo::Clock::now());
     if (ended > 0) {
@@ -121,6 +148,30 @@ int main() {
       dots += (i < in_set || full) ? "● " : "○ ";
     }
 
+    if (settings_open) {
+      Elements rows;
+      for (int i = 0; i < kFieldCount; ++i) {
+        const Field& f = kFields[i];
+        const bool on = (i == field);
+        auto row = hbox({
+            text(on ? " > " : "   "),
+            text(f.label) | flex,
+            text(std::to_string(timer.config().*(f.member))) | align_right |
+                size(WIDTH, EQUAL, 4),
+            text(std::string(" ") + f.unit) | size(WIDTH, EQUAL, 4),
+        });
+        rows.push_back(on ? (row | bold | color(accent)) : (row | dim));
+      }
+      return vbox({
+                 text("S E T T I N G S") | bold | color(accent) | hcenter,
+                 text("") | size(HEIGHT, EQUAL, 1),
+                 vbox(std::move(rows)),
+                 text("") | size(HEIGHT, EQUAL, 1),
+                 text("up/down select   left/right adjust   esc close") | dim | hcenter,
+             }) |
+             border | size(WIDTH, EQUAL, 52) | center;  // wide enough for the hint line
+    }
+
     return vbox({
                text(label_of(timer.phase())) | bold | color(accent) | hcenter,
                text("") | size(HEIGHT, EQUAL, 1),
@@ -132,13 +183,35 @@ int main() {
                text(dots) | color(accent) | hcenter,
                text(timer.running() ? "running" : "paused") | dim | hcenter,
                text("") | size(HEIGHT, EQUAL, 1),
-               text("space start/pause   r reset   s skip   q quit") | dim | hcenter,
+               text("space pause   r reset   s skip   c settings   q quit") | dim | hcenter,
            }) |
            border | center;
   });
 
   auto app = CatchEvent(renderer, [&](const Event& e) {
     const auto now = pomo::Clock::now();
+
+    // Settings owns every key while it is open, so nothing here can also start
+    // the timer or quit the app by accident.
+    if (settings_open) {
+      if (e == Event::ArrowUp) {
+        field = (field + kFieldCount - 1) % kFieldCount;
+      } else if (e == Event::ArrowDown) {
+        field = (field + 1) % kFieldCount;
+      } else if (e == Event::ArrowLeft) {
+        adjust(-1);
+      } else if (e == Event::ArrowRight) {
+        adjust(+1);
+      } else if (e == Event::Escape || e == Event::Return || e == Event::Character('c')) {
+        settings_open = false;
+      }
+      return true;
+    }
+
+    if (e == Event::Character('c')) {
+      settings_open = true;
+      return true;
+    }
     if (e == Event::Character(' ')) {
       timer.toggle(now);
       return true;
