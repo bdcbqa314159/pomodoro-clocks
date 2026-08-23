@@ -1,5 +1,10 @@
 # Milestone 1 — the timer core
 
+> **Status: done.** Bernardo asked me to implement it rather than drive it as an exercise, so
+> `src/pomodoro.cpp` is written and all 26 tests pass. The doc stays as the design record — the
+> Background and "the flaw this design exists to avoid" sections explain *why* the code looks
+> the way it does, and the Stretch goals are still open.
+
 ## Context
 
 `prototype/index.html` is a working pomodoro: SVG ring, chimes, notifications, settings.
@@ -91,12 +96,8 @@ class will be a place where you read the non-authoritative one.
 cmake --preset debug && cmake --build --preset debug && ctest --preset debug
 ```
 
-26 tests, 0 failures. That's the whole pass/fail signal.
-
-Right now: **23 fail, 3 pass**. Those 3 pass vacuously — the stubs return `Phase::Focus` and
-`0`, which happens to be the right answer for `PhaseAfter.EveryBreakGoesBackToFocus`,
-`TimerRun.RemainingNeverGoesNegative` and `TimerTick.StoppedTimerNeverAdvances`. Don't read
-them as progress.
+26 tests, 0 failures. That's the whole pass/fail signal. Currently **26/26 green**, warning-clean
+under `-Wall -Wextra -Wpedantic`, and green under the `asan` preset (ASan + UBSan).
 
 ## Hints & research (pointers, not answers)
 

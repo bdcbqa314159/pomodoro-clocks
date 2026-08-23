@@ -249,7 +249,7 @@ TEST(SetConfig, RetimesTheCurrentPhaseWhenItsLengthChanged) {
   Timer t;
   t.start(t0);
   t.tick(t0 + mins(10));
-  t.set_config(Config{50, 5, 15, 4}, t0 + mins(10));
+  t.set_config(Config{50, 5, 15, 4});
   EXPECT_EQ(t.remaining(), mins(50));
   EXPECT_FALSE(t.running());  // retiming stops the clock, like reset()
 }
@@ -258,7 +258,7 @@ TEST(SetConfig, LeavesTheCountdownAloneWhenAnotherPhaseChanged) {
   Timer t;
   t.start(t0);
   t.tick(t0 + mins(10));
-  t.set_config(Config{25, 10, 15, 4}, t0 + mins(10));  // only short_min moved
+  t.set_config(Config{25, 10, 15, 4});  // only short_min moved
   EXPECT_EQ(t.remaining(), mins(15));
   EXPECT_TRUE(t.running());
   EXPECT_EQ(t.config().short_min, 10);
@@ -272,7 +272,7 @@ TEST(SetConfig, RoundsChangeIsNotARetime) {
   Timer t;
   t.start(t0);
   t.tick(t0 + mins(10));
-  t.set_config(Config{25, 5, 15, 2}, t0 + mins(10));
+  t.set_config(Config{25, 5, 15, 2});
   EXPECT_TRUE(t.running());
   EXPECT_EQ(t.remaining(), mins(15));
   EXPECT_EQ(t.config().rounds, 2);

@@ -73,8 +73,9 @@ class Timer {
   int tick(TimePoint now);
 
   /// Replace the configuration. If the *current* phase's length changed, retime
-  /// the current phase (as reset() does); otherwise leave the countdown alone.
-  void set_config(const Config& cfg, TimePoint now);
+  /// the current phase (as reset() does, so the clock stops); otherwise leave the
+  /// countdown running and untouched.
+  void set_config(const Config& cfg);
 
  private:
   Config cfg_{};
