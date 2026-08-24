@@ -1,9 +1,20 @@
 # pomodoro
 
-A pomodoro timer, as a terminal app. C++20.
+A pomodoro timer, three ways.
 
-`prototype/index.html` is the working reference implementation — open it in a browser. The C++
-port exists to rebuild it as a native TUI (and to learn C++ doing it).
+| flavour | stack | run it |
+|---|---|---|
+| **Terminal** | C++20 + FTXUI | `pomodoro` |
+| **Desktop GUI** | Rust + egui | `cd rust && cargo run --release` |
+| **Browser** | Rust + egui → WASM | `cd rust && trunk serve --release` |
+
+The GUI and the browser build are **the same Rust code** — one crate, two targets. `src/app.rs`
+is compiled unchanged for both; only the entry point in `src/main.rs` differs.
+
+There is **no JavaScript** in this project. The browser build ships a wasm-bindgen loader that
+Trunk generates; no `.js` file is hand-written or maintained.
+
+`prototype/index.html` is the original HTML/JS version, kept as a reference.
 
 ## Install
 
@@ -77,14 +88,37 @@ FTXUI and GoogleTest.
 ## Layout
 
 ```
-src/pomodoro.hpp     timer core — pure logic, no I/O, no clock reads
+src/pomodoro.hpp     C++ timer core — pure logic, no I/O, no clock reads
 src/pomodoro.cpp     implementation
 src/config_io.*      config file read/write — parsing half is pure and tested
 src/main.cpp         FTXUI terminal app — the only place that reads a clock
 tests/               GoogleTest, fake time
 docs/                milestone notes
 prototype/           the HTML original
+
+rust/src/timer.rs    Rust timer core — same semantics, f64 seconds not Instant
+rust/src/app.rs      egui UI — shared by the native GUI and the browser build
+rust/src/alert.rs    sound + notifications; the only cfg-split file
+rust/src/main.rs     both entry points (native window / wasm canvas)
+rust/index.html      Trunk template — markup only, no script tag
 ```
+
+## Rust builds
+
+```sh
+cd rust
+cargo test              # 20 core tests, ported from the C++ suite
+cargo run --release     # native GUI window
+trunk serve --release   # browser at http://127.0.0.1:8080
+trunk build --release   # static bundle in rust/dist/
+```
+
+The wasm bundle is ~3.9 MB. `wasm-opt` needs `--enable-bulk-memory` (set in `rust/index.html`)
+because the toolchain emits `memory.copy`.
+
+Settings persist in both Rust builds through eframe's storage — a file on native,
+`localStorage` in the browser. They are **not** shared with the C++ build's
+`~/.config/pomodoro/config`; the three flavours keep their own settings.
 
 ## Dev tooling
 

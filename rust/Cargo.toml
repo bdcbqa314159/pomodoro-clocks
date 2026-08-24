@@ -1,0 +1,47 @@
+[package]
+name = "pomodoro"
+version = "0.1.0"
+edition = "2021"
+
+# One crate, two targets: `cargo run` builds the native GUI, `trunk build`
+# builds the same app to WASM. src/app.rs is shared verbatim.
+#
+# The lib stays a plain rlib: adding cdylib makes the lib and the bin both emit
+# an artifact called "pomodoro", and Trunk cannot tell them apart.
+
+[dependencies]
+# persistence: eframe's Storage is a file on native and localStorage on web —
+# one API covers both, so there is no config-file code to write twice.
+eframe = { version = "0.36.1", default-features = false, features = [
+    "default_fonts",
+    "glow",
+    "persistence",
+    "wayland",
+    "x11",
+] }
+serde = { version = "1", features = ["derive"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "AudioContext",
+    "AudioDestinationNode",
+    "AudioParam",
+    "Document",
+    "GainNode",
+    "HtmlCanvasElement",
+    "Notification",
+    "NotificationOptions",
+    "NotificationPermission",
+    "OscillatorNode",
+    "OscillatorType",
+    "Window",
+] }
+
+[profile.release]
+opt-level = "s"   # measured smaller than "z" for this crate (3.9M vs 4.6M)
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -23,3 +23,7 @@ CMakeUserPresets.json
 .venv/
 .claude/
 CLAUDE.local.md
+
+# rust
+rust/target/
+rust/dist/

@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>Pomodoro</title>
+
+    <!-- Trunk compiles the crate to wasm and injects the wasm-bindgen loader.
+         There is no hand-written JavaScript in this project. -->
+    <link data-trunk rel="rust" data-bin="pomodoro" data-wasm-opt="z" data-wasm-opt-params="--enable-bulk-memory --enable-bulk-memory-opt --enable-nontrapping-float-to-int" />
+
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #10131a; }
+      canvas { display: block; width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+  </body>
+</html>
