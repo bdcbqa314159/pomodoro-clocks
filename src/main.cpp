@@ -91,6 +91,15 @@ int main() {
   bool saved_ok = true;
   int field = 0;  // index into kFields
 
+  // Empty path == no home directory anywhere; say so rather than printing "".
+  const auto cfg_path = pomo::config_path();
+  const std::string config_location =
+      cfg_path.empty() ? std::string("no home directory - settings are not persisted")
+                       : cfg_path.string();
+  const std::string save_error = cfg_path.empty()
+                                     ? "settings not saved - no home directory"
+                                     : "settings not saved - could not write " + cfg_path.string();
+
   struct Field {
     const char* label;
     int pomo::Config::*member;
@@ -170,14 +179,13 @@ int main() {
                  vbox(std::move(rows)),
                  text("") | size(HEIGHT, EQUAL, 1),
                  text("up/down select   left/right adjust   esc close") | dim | hcenter,
-                 text(pomo::config_path().string()) | dim | hcenter,
+                 text(config_location) | dim | hcenter,
              }) |
              border | size(WIDTH, EQUAL, 52) | center;  // wide enough for the hint line
     }
 
     Element save_warning = saved_ok ? filler() | size(HEIGHT, EQUAL, 0)
-                                    : text("could not write " + pomo::config_path().string()) |
-                                          color(Color::Red) | hcenter;
+                                    : text(save_error) | color(Color::Red) | hcenter;
 
     return vbox({
                text(label_of(timer.phase())) | bold | color(accent) | hcenter,

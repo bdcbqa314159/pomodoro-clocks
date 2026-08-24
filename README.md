@@ -5,11 +5,34 @@ A pomodoro timer, as a terminal app. C++20.
 `prototype/index.html` is the working reference implementation — open it in a browser. The C++
 port exists to rebuild it as a native TUI (and to learn C++ doing it).
 
+## Install
+
+```sh
+cmake --preset release
+cmake --build --preset release
+cmake --install build/release
+```
+
+Installs `bin/pomodoro` to `~/.local` by default — **no `sudo`, nothing touched outside your
+home directory**. Add `~/.local/bin` to `PATH` if it isn't already:
+
+```sh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+```
+
+Anywhere else:
+
+```sh
+cmake --install build/release --prefix /opt/tools      # or any writable directory
+```
+
+Only the executable is installed. To uninstall, delete `<prefix>/bin/pomodoro`.
+
 ## Run
 
 ```sh
-cmake --preset release && cmake --build --preset release
-./build/release/pomodoro
+pomodoro                      # if installed
+./build/release/pomodoro      # straight from the build tree
 ```
 
 | key | |
@@ -21,7 +44,15 @@ cmake --preset release && cmake --build --preset release
 | `q` / `esc` | quit |
 
 Defaults are 25 / 5 / 15 with a long break every 4. Changing them in the settings screen writes
-`$XDG_CONFIG_HOME/pomodoro/config` (or `~/.config/pomodoro/config`) on close:
+a config file on close — resolved in this order:
+
+1. `$XDG_CONFIG_HOME/pomodoro/config`
+2. `~/.config/pomodoro/config`
+3. `%APPDATA%\pomodoro\config` (Windows)
+4. none of the above set → runs on defaults and persists nothing, saying so on screen
+
+The config belongs to the user, not the binary: move, reinstall or rebuild the executable and
+your settings follow you.
 
 ```
 focus=25

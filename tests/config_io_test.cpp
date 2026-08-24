@@ -2,7 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+#include <filesystem>
 #include <sstream>
+#include <string>
 
 using pomo::Config;
 
@@ -79,11 +82,87 @@ TEST(WriteConfig, RoundTrips) {
   EXPECT_EQ(back.rounds, original.rounds);
 }
 
-TEST(ConfigPath, IsAbsoluteWhenHomeIsSet) {
-  // Both CI and a dev machine always have one of these.
-  const auto p = pomo::config_path();
-  EXPECT_FALSE(p.empty());
-  EXPECT_EQ(p.filename(), "config");
+#ifndef _WIN32  // setenv/unsetenv are POSIX; these three are skipped on Windows
+
+// Restores whatever was there before, so test order stays irrelevant.
+class ScopedEnv {
+ public:
+  ScopedEnv(const char* name, const char* value) : name_(name) {
+    if (const char* old = std::getenv(name); old != nullptr) {
+      had_ = true;
+      old_ = old;
+    }
+    set(value);
+  }
+  ~ScopedEnv() { set(had_ ? old_.c_str() : nullptr); }
+  ScopedEnv(const ScopedEnv&) = delete;
+  ScopedEnv& operator=(const ScopedEnv&) = delete;
+
+ private:
+  void set(const char* v) const {
+    if (v != nullptr) {
+      ::setenv(name_, v, 1);
+    } else {
+      ::unsetenv(name_);
+    }
+  }
+  const char* name_;
+  bool had_ = false;
+  std::string old_;
+};
+
+TEST(ConfigPath, PrefersXdgConfigHome) {
+  ScopedEnv xdg("XDG_CONFIG_HOME", "/tmp/xdg");
+  ScopedEnv home("HOME", "/tmp/home");
+  EXPECT_EQ(pomo::config_path(), std::filesystem::path("/tmp/xdg/pomodoro/config"));
 }
+
+TEST(ConfigPath, FallsBackToDotConfigUnderHome) {
+  ScopedEnv xdg("XDG_CONFIG_HOME", nullptr);
+  ScopedEnv home("HOME", "/tmp/home");
+  EXPECT_EQ(pomo::config_path(), std::filesystem::path("/tmp/home/.config/pomodoro/config"));
+}
+
+TEST(ConfigPath, TreatsBlankEnvVarsAsUnset) {
+  ScopedEnv xdg("XDG_CONFIG_HOME", "");
+  ScopedEnv home("HOME", "/tmp/home");
+  EXPECT_EQ(pomo::config_path(), std::filesystem::path("/tmp/home/.config/pomodoro/config"));
+}
+
+TEST(ConfigPath, IsEmptyWithNoHomeAtAll) {
+  // The old behaviour dropped pomodoro.conf into the working directory, which
+  // gave you a different config per directory you launched from.
+  ScopedEnv xdg("XDG_CONFIG_HOME", nullptr);
+  ScopedEnv home("HOME", nullptr);
+  ScopedEnv appdata("APPDATA", nullptr);
+  EXPECT_TRUE(pomo::config_path().empty());
+}
+
+TEST(SaveConfig, FailsCleanlyWithNowhereToWrite) {
+  ScopedEnv xdg("XDG_CONFIG_HOME", nullptr);
+  ScopedEnv home("HOME", nullptr);
+  ScopedEnv appdata("APPDATA", nullptr);
+  EXPECT_FALSE(pomo::save_config(Config{}));
+  EXPECT_EQ(pomo::load_config().focus_min, 25);  // still usable, just not persisted
+}
+
+TEST(SaveConfig, RoundTripsThroughARealFile) {
+  const auto dir = std::filesystem::temp_directory_path() / "pomodoro_test_cfg";
+  std::filesystem::remove_all(dir);
+  ScopedEnv xdg("XDG_CONFIG_HOME", dir.string().c_str());
+
+  EXPECT_TRUE(pomo::save_config(Config{40, 8, 20, 2}));
+  EXPECT_TRUE(std::filesystem::exists(dir / "pomodoro" / "config"));
+
+  const Config back = pomo::load_config();
+  EXPECT_EQ(back.focus_min, 40);
+  EXPECT_EQ(back.short_min, 8);
+  EXPECT_EQ(back.long_min, 20);
+  EXPECT_EQ(back.rounds, 2);
+
+  std::filesystem::remove_all(dir);
+}
+
+#endif  // _WIN32
 
 }  // namespace

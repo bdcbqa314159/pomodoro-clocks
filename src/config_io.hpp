@@ -10,8 +10,14 @@
 
 namespace pomo {
 
-/// $XDG_CONFIG_HOME/pomodoro/config, else $HOME/.config/pomodoro/config,
-/// else ./pomodoro.conf when neither is set.
+/// $XDG_CONFIG_HOME/pomodoro/config, else $HOME/.config/pomodoro/config, else
+/// %APPDATA%/pomodoro/config on Windows.
+///
+/// Returns an EMPTY path when none of those are set (containers, cron, launchd).
+/// Callers must treat that as "no config file" — the app runs on in-memory
+/// defaults. It deliberately does not fall back to the working directory: that
+/// gives you a different config per directory you launch from, which is worse
+/// than having none.
 std::filesystem::path config_path();
 
 /// Never throws and never fails: unknown keys, junk values, missing lines and

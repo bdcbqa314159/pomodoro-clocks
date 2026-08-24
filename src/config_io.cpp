@@ -19,17 +19,27 @@ std::string_view trim(std::string_view s) {
   return s.substr(first, s.find_last_not_of(" \t\r") - first + 1);
 }
 
+/// getenv, but an empty string counts as unset — an exported-but-blank HOME
+/// would otherwise resolve to "/.config/pomodoro/config".
+const char* env(const char* name) {
+  const char* v = std::getenv(name);
+  return (v != nullptr && *v != '\0') ? v : nullptr;
+}
+
 }  // namespace
 
 std::filesystem::path config_path() {
   namespace fs = std::filesystem;
-  if (const char* xdg = std::getenv("XDG_CONFIG_HOME"); xdg != nullptr && *xdg != '\0') {
+  if (const char* xdg = env("XDG_CONFIG_HOME"); xdg != nullptr) {
     return fs::path(xdg) / "pomodoro" / "config";
   }
-  if (const char* home = std::getenv("HOME"); home != nullptr && *home != '\0') {
+  if (const char* home = env("HOME"); home != nullptr) {
     return fs::path(home) / ".config" / "pomodoro" / "config";
   }
-  return "pomodoro.conf";  // no HOME (cron, containers): keep it next to the binary
+  if (const char* appdata = env("APPDATA"); appdata != nullptr) {  // Windows
+    return fs::path(appdata) / "pomodoro" / "config";
+  }
+  return {};  // no home directory at all: run on defaults, persist nothing
 }
 
 Config parse_config(std::istream& in) {
@@ -72,7 +82,11 @@ void write_config(std::ostream& out, const Config& cfg) {
 }
 
 Config load_config() {
-  std::ifstream in(config_path());
+  const auto path = config_path();
+  if (path.empty()) {
+    return Config{};
+  }
+  std::ifstream in(path);
   if (!in) {
     return Config{};
   }
@@ -81,6 +95,9 @@ Config load_config() {
 
 bool save_config(const Config& cfg) {
   const auto path = config_path();
+  if (path.empty()) {
+    return false;  // nowhere to put it; the caller surfaces this
+  }
   std::error_code ec;
   std::filesystem::create_directories(path.parent_path(), ec);  // ec: never throws
   std::ofstream out(path, std::ios::trunc);
