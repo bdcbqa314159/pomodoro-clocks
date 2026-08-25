@@ -9,10 +9,10 @@ namespace {
 Duration minutes_to_duration(int m) {
   return std::chrono::duration_cast<Duration>(std::chrono::minutes(m));
 }
-}  // namespace
+} // namespace
 
 int clamp_minutes(double value, int max_value) {
-  const long rounded = std::lround(value);  // half away from zero
+  const long rounded = std::lround(value); // half away from zero
   return static_cast<int>(std::clamp<long>(rounded, 1, max_value));
 }
 
@@ -24,16 +24,16 @@ Phase phase_after(Phase current, int completed, int rounds) {
   return (rounds > 0 && completed % rounds == 0) ? Phase::LongBreak : Phase::ShortBreak;
 }
 
-Duration duration_of(const Config& cfg, Phase p) {
+Duration duration_of(const Config &cfg, Phase p) {
   switch (p) {
-    case Phase::Focus:
-      return minutes_to_duration(cfg.focus_min);
-    case Phase::ShortBreak:
-      return minutes_to_duration(cfg.short_min);
-    case Phase::LongBreak:
-      return minutes_to_duration(cfg.long_min);
+  case Phase::Focus:
+    return minutes_to_duration(cfg.focus_min);
+  case Phase::ShortBreak:
+    return minutes_to_duration(cfg.short_min);
+  case Phase::LongBreak:
+    return minutes_to_duration(cfg.long_min);
   }
-  return Duration{0};  // unreachable for a valid Phase; keeps -Wreturn-type quiet
+  return Duration{0}; // unreachable for a valid Phase; keeps -Wreturn-type quiet
 }
 
 Timer::Timer(Config cfg) : cfg_(cfg), remaining_(duration_of(cfg, Phase::Focus)) {}
@@ -46,11 +46,11 @@ bool Timer::running() const noexcept { return running_; }
 
 Duration Timer::remaining() const noexcept { return remaining_; }
 
-const Config& Timer::config() const noexcept { return cfg_; }
+const Config &Timer::config() const noexcept { return cfg_; }
 
 void Timer::start(TimePoint now) {
   if (running_) {
-    return;  // idempotent: must not push the deadline out
+    return; // idempotent: must not push the deadline out
   }
   deadline_ = now + remaining_;
   running_ = true;
@@ -119,12 +119,12 @@ int Timer::tick(TimePoint now) {
   return transitions;
 }
 
-void Timer::set_config(const Config& cfg) {
+void Timer::set_config(const Config &cfg) {
   const Duration before = duration_of(cfg_, phase_);
   cfg_ = cfg;
   if (duration_of(cfg_, phase_) != before) {
-    reset();  // the phase you are sitting in changed length: retime it
+    reset(); // the phase you are sitting in changed length: retime it
   }
 }
 
-}  // namespace pomo
+} // namespace pomo

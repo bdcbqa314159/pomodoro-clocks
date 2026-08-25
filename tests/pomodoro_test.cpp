@@ -13,15 +13,18 @@ using pomo::Timer;
 
 namespace pomo {
 // Readable failure messages instead of raw bytes.
-std::ostream& operator<<(std::ostream& os, Phase p) {
+std::ostream &operator<<(std::ostream &os, Phase p) {
   switch (p) {
-    case Phase::Focus: return os << "Focus";
-    case Phase::ShortBreak: return os << "ShortBreak";
-    case Phase::LongBreak: return os << "LongBreak";
+  case Phase::Focus:
+    return os << "Focus";
+  case Phase::ShortBreak:
+    return os << "ShortBreak";
+  case Phase::LongBreak:
+    return os << "LongBreak";
   }
   return os << "?";
 }
-}  // namespace pomo
+} // namespace pomo
 
 namespace {
 
@@ -47,7 +50,7 @@ TEST(ClampMinutes, ClampsIntoRange) {
 TEST(ClampMinutes, RoundsToNearest) {
   EXPECT_EQ(pomo::clamp_minutes(25.4, 180), 25);
   EXPECT_EQ(pomo::clamp_minutes(25.6, 180), 26);
-  EXPECT_EQ(pomo::clamp_minutes(2.5, 180), 3);  // half away from zero
+  EXPECT_EQ(pomo::clamp_minutes(2.5, 180), 3); // half away from zero
 }
 
 TEST(PhaseAfter, FocusGoesToShortBreakMidSet) {
@@ -68,7 +71,7 @@ TEST(PhaseAfter, EveryBreakGoesBackToFocus) {
 }
 
 TEST(DurationOf, ReadsTheConfig) {
-  Config cfg;  // 25 / 5 / 15
+  Config cfg; // 25 / 5 / 15
   EXPECT_EQ(pomo::duration_of(cfg, Phase::Focus), mins(25));
   EXPECT_EQ(pomo::duration_of(cfg, Phase::ShortBreak), mins(5));
   EXPECT_EQ(pomo::duration_of(cfg, Phase::LongBreak), mins(15));
@@ -100,7 +103,7 @@ TEST(TimerRun, StartThenTickCountsDown) {
   Timer t;
   t.start(t0);
   EXPECT_TRUE(t.running());
-  EXPECT_EQ(t.remaining(), mins(25));  // start alone consumes nothing
+  EXPECT_EQ(t.remaining(), mins(25)); // start alone consumes nothing
 
   EXPECT_EQ(t.tick(t0 + mins(10)), 0);
   EXPECT_EQ(t.remaining(), mins(15));
@@ -110,7 +113,7 @@ TEST(TimerRun, StartThenTickCountsDown) {
 TEST(TimerRun, StartIsIdempotent) {
   Timer t;
   t.start(t0);
-  t.start(t0 + mins(5));  // must not push the deadline out
+  t.start(t0 + mins(5)); // must not push the deadline out
   EXPECT_EQ(t.tick(t0 + mins(10)), 0);
   EXPECT_EQ(t.remaining(), mins(15));
 }
@@ -122,7 +125,7 @@ TEST(TimerRun, PauseFreezesTheCountdown) {
   EXPECT_FALSE(t.running());
   EXPECT_EQ(t.remaining(), mins(15));
 
-  EXPECT_EQ(t.tick(t0 + mins(90)), 0);  // time passes, paused timer ignores it
+  EXPECT_EQ(t.tick(t0 + mins(90)), 0); // time passes, paused timer ignores it
   EXPECT_EQ(t.remaining(), mins(15));
 
   t.start(t0 + mins(90));
@@ -173,7 +176,7 @@ TEST(TimerTick, FocusEndsExactlyOnTheDeadline) {
   EXPECT_EQ(t.phase(), Phase::ShortBreak);
   EXPECT_EQ(t.completed(), 1);
   EXPECT_EQ(t.remaining(), mins(5));
-  EXPECT_TRUE(t.running());  // auto-continues
+  EXPECT_TRUE(t.running()); // auto-continues
 }
 
 TEST(TimerTick, DoesNotDrift) {
@@ -192,7 +195,7 @@ TEST(TimerTick, RollsThroughSeveralPhasesInOneJump) {
   EXPECT_EQ(t.tick(t0 + mins(31)), 2);
   EXPECT_EQ(t.phase(), Phase::Focus);
   EXPECT_EQ(t.completed(), 1);
-  EXPECT_EQ(t.remaining(), mins(24));  // deadline at minute 55
+  EXPECT_EQ(t.remaining(), mins(24)); // deadline at minute 55
 }
 
 TEST(TimerTick, ReachesTheLongBreakAfterFourFocusBlocks) {
@@ -223,7 +226,7 @@ TEST(TimerSkip, EndsFocusEarlyAndKeepsRunning) {
   EXPECT_TRUE(t.running());
   EXPECT_EQ(t.remaining(), mins(5));
 
-  t.tick(t0 + mins(5));  // 2 min into the 5 min break
+  t.tick(t0 + mins(5)); // 2 min into the 5 min break
   EXPECT_EQ(t.remaining(), mins(3));
 }
 
@@ -237,8 +240,8 @@ TEST(TimerSkip, OnAStoppedTimerLeavesItStopped) {
 
 TEST(TimerSkip, BreakSkipsBackToFocusWithoutCrediting) {
   Timer t;
-  t.skip(t0);  // focus -> short break, completed = 1
-  t.skip(t0);  // break  -> focus, still 1
+  t.skip(t0); // focus -> short break, completed = 1
+  t.skip(t0); // break  -> focus, still 1
   EXPECT_EQ(t.phase(), Phase::Focus);
   EXPECT_EQ(t.completed(), 1);
 }
@@ -251,21 +254,21 @@ TEST(SetConfig, RetimesTheCurrentPhaseWhenItsLengthChanged) {
   t.tick(t0 + mins(10));
   t.set_config(Config{50, 5, 15, 4});
   EXPECT_EQ(t.remaining(), mins(50));
-  EXPECT_FALSE(t.running());  // retiming stops the clock, like reset()
+  EXPECT_FALSE(t.running()); // retiming stops the clock, like reset()
 }
 
 TEST(SetConfig, LeavesTheCountdownAloneWhenAnotherPhaseChanged) {
   Timer t;
   t.start(t0);
   t.tick(t0 + mins(10));
-  t.set_config(Config{25, 10, 15, 4});  // only short_min moved
+  t.set_config(Config{25, 10, 15, 4}); // only short_min moved
   EXPECT_EQ(t.remaining(), mins(15));
   EXPECT_TRUE(t.running());
   EXPECT_EQ(t.config().short_min, 10);
 
-  t.tick(t0 + mins(25));  // focus still ends on its original deadline
+  t.tick(t0 + mins(25)); // focus still ends on its original deadline
   EXPECT_EQ(t.phase(), Phase::ShortBreak);
-  EXPECT_EQ(t.remaining(), mins(10));  // new break length applies
+  EXPECT_EQ(t.remaining(), mins(10)); // new break length applies
 }
 
 TEST(SetConfig, RoundsChangeIsNotARetime) {
@@ -278,4 +281,4 @@ TEST(SetConfig, RoundsChangeIsNotARetime) {
   EXPECT_EQ(t.config().rounds, 2);
 }
 
-}  // namespace
+} // namespace

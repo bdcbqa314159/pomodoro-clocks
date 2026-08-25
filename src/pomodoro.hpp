@@ -13,7 +13,7 @@ struct Config {
   int focus_min = 25;
   int short_min = 5;
   int long_min = 15;
-  int rounds = 4;  // focus blocks before a long break
+  int rounds = 4; // focus blocks before a long break
 };
 
 // Bounds every path into Config must respect: the settings screen, the config
@@ -39,14 +39,14 @@ int clamp_minutes(double value, int max_value);
 Phase phase_after(Phase current, int completed, int rounds);
 
 /// Configured length of `p`, as a Duration.
-Duration duration_of(const Config& cfg, Phase p);
+Duration duration_of(const Config &cfg, Phase p);
 
 // ---------------------------------------------------------------------------
 // Task 2 — the timer
 // ---------------------------------------------------------------------------
 
 class Timer {
- public:
+public:
   explicit Timer(Config cfg = Config{});
 
   // --- observers ---
@@ -57,7 +57,7 @@ class Timer {
   /// Time left in the current phase, as of the last tick()/start()/pause().
   /// Never negative.
   Duration remaining() const noexcept;
-  const Config& config() const noexcept;
+  const Config &config() const noexcept;
 
   // --- commands ---
   /// No-op if already running. Otherwise the phase ends at now + remaining().
@@ -80,15 +80,15 @@ class Timer {
   /// Replace the configuration. If the *current* phase's length changed, retime
   /// the current phase (as reset() does, so the clock stops); otherwise leave the
   /// countdown running and untouched.
-  void set_config(const Config& cfg);
+  void set_config(const Config &cfg);
 
- private:
+private:
   Config cfg_{};
   Phase phase_ = Phase::Focus;
   int completed_ = 0;
   bool running_ = false;
-  Duration remaining_{};   // authoritative while paused
-  TimePoint deadline_{};   // authoritative while running
+  Duration remaining_{}; // authoritative while paused
+  TimePoint deadline_{}; // authoritative while running
 };
 
-}  // namespace pomo
+} // namespace pomo

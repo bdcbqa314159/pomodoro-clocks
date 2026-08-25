@@ -42,7 +42,7 @@ jobs:
 
   format:
     runs-on: macos-latest
-    continue-on-error: true  # advisory until the tree is normalised
+    # Blocking now that the tree is normalised with the pinned clang-format.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

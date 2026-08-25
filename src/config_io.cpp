@@ -21,34 +21,34 @@ std::string_view trim(std::string_view s) {
 
 /// getenv, but an empty string counts as unset — an exported-but-blank HOME
 /// would otherwise resolve to "/.config/pomodoro/config".
-const char* env(const char* name) {
-  const char* v = std::getenv(name);
+const char *env(const char *name) {
+  const char *v = std::getenv(name);
   return (v != nullptr && *v != '\0') ? v : nullptr;
 }
 
-}  // namespace
+} // namespace
 
 std::filesystem::path config_path() {
   namespace fs = std::filesystem;
-  if (const char* xdg = env("XDG_CONFIG_HOME"); xdg != nullptr) {
+  if (const char *xdg = env("XDG_CONFIG_HOME"); xdg != nullptr) {
     return fs::path(xdg) / "pomodoro" / "config";
   }
-  if (const char* home = env("HOME"); home != nullptr) {
+  if (const char *home = env("HOME"); home != nullptr) {
     return fs::path(home) / ".config" / "pomodoro" / "config";
   }
-  if (const char* appdata = env("APPDATA"); appdata != nullptr) {  // Windows
+  if (const char *appdata = env("APPDATA"); appdata != nullptr) { // Windows
     return fs::path(appdata) / "pomodoro" / "config";
   }
-  return {};  // no home directory at all: run on defaults, persist nothing
+  return {}; // no home directory at all: run on defaults, persist nothing
 }
 
-Config parse_config(std::istream& in) {
-  Config cfg;  // anything the file does not say keeps the default
+Config parse_config(std::istream &in) {
+  Config cfg; // anything the file does not say keeps the default
   std::string line;
   while (std::getline(in, line)) {
     const auto eq = line.find('=');
     if (eq == std::string::npos) {
-      continue;  // blank line, comment, garbage — skip it
+      continue; // blank line, comment, garbage — skip it
     }
     const std::string_view key = trim(std::string_view(line).substr(0, eq));
     const std::string_view val = trim(std::string_view(line).substr(eq + 1));
@@ -56,7 +56,7 @@ Config parse_config(std::istream& in) {
     int n = 0;
     const auto [ptr, ec] = std::from_chars(val.data(), val.data() + val.size(), n);
     if (ec != std::errc{} || ptr != val.data() + val.size()) {
-      continue;  // "focus=abc" or "focus=25x": keep the default
+      continue; // "focus=abc" or "focus=25x": keep the default
     }
 
     // Clamp on the way in. A hand-edited "focus=0" must not produce a zero-length
@@ -74,7 +74,7 @@ Config parse_config(std::istream& in) {
   return cfg;
 }
 
-void write_config(std::ostream& out, const Config& cfg) {
+void write_config(std::ostream &out, const Config &cfg) {
   out << "focus=" << cfg.focus_min << "\n"
       << "short=" << cfg.short_min << "\n"
       << "long=" << cfg.long_min << "\n"
@@ -93,13 +93,13 @@ Config load_config() {
   return parse_config(in);
 }
 
-bool save_config(const Config& cfg) {
+bool save_config(const Config &cfg) {
   const auto path = config_path();
   if (path.empty()) {
-    return false;  // nowhere to put it; the caller surfaces this
+    return false; // nowhere to put it; the caller surfaces this
   }
   std::error_code ec;
-  std::filesystem::create_directories(path.parent_path(), ec);  // ec: never throws
+  std::filesystem::create_directories(path.parent_path(), ec); // ec: never throws
   std::ofstream out(path, std::ios::trunc);
   if (!out) {
     return false;
@@ -108,4 +108,4 @@ bool save_config(const Config& cfg) {
   return out.good();
 }
 
-}  // namespace pomo
+} // namespace pomo

@@ -11,7 +11,7 @@ using pomo::Config;
 
 namespace {
 
-Config parse(const std::string& text) {
+Config parse(const std::string &text) {
   std::istringstream in(text);
   return pomo::parse_config(in);
 }
@@ -35,7 +35,7 @@ TEST(ParseConfig, EmptyInputGivesDefaults) {
 TEST(ParseConfig, MissingFieldsKeepTheirDefaults) {
   const Config c = parse("focus=50\n");
   EXPECT_EQ(c.focus_min, 50);
-  EXPECT_EQ(c.short_min, 5);  // untouched
+  EXPECT_EQ(c.short_min, 5); // untouched
 }
 
 TEST(ParseConfig, ToleratesWhitespace) {
@@ -47,13 +47,13 @@ TEST(ParseConfig, ToleratesWhitespace) {
 TEST(ParseConfig, IgnoresJunkLines) {
   const Config c = parse("this is not a config\n\n# comment\nfocus=50\n=\nlong=\n");
   EXPECT_EQ(c.focus_min, 50);
-  EXPECT_EQ(c.long_min, 15);  // "long=" is not a number: default survives
+  EXPECT_EQ(c.long_min, 15); // "long=" is not a number: default survives
 }
 
 TEST(ParseConfig, RejectsNonNumericAndTrailingGarbage) {
   EXPECT_EQ(parse("focus=abc\n").focus_min, 25);
   EXPECT_EQ(parse("focus=25x\n").focus_min, 25);
-  EXPECT_EQ(parse("focus=2.5\n").focus_min, 25);  // no partial reads
+  EXPECT_EQ(parse("focus=2.5\n").focus_min, 25); // no partial reads
 }
 
 TEST(ParseConfig, ClampsHandEditedValues) {
@@ -82,31 +82,31 @@ TEST(WriteConfig, RoundTrips) {
   EXPECT_EQ(back.rounds, original.rounds);
 }
 
-#ifndef _WIN32  // setenv/unsetenv are POSIX; these three are skipped on Windows
+#ifndef _WIN32 // setenv/unsetenv are POSIX; these three are skipped on Windows
 
 // Restores whatever was there before, so test order stays irrelevant.
 class ScopedEnv {
- public:
-  ScopedEnv(const char* name, const char* value) : name_(name) {
-    if (const char* old = std::getenv(name); old != nullptr) {
+public:
+  ScopedEnv(const char *name, const char *value) : name_(name) {
+    if (const char *old = std::getenv(name); old != nullptr) {
       had_ = true;
       old_ = old;
     }
     set(value);
   }
   ~ScopedEnv() { set(had_ ? old_.c_str() : nullptr); }
-  ScopedEnv(const ScopedEnv&) = delete;
-  ScopedEnv& operator=(const ScopedEnv&) = delete;
+  ScopedEnv(const ScopedEnv &) = delete;
+  ScopedEnv &operator=(const ScopedEnv &) = delete;
 
- private:
-  void set(const char* v) const {
+private:
+  void set(const char *v) const {
     if (v != nullptr) {
       ::setenv(name_, v, 1);
     } else {
       ::unsetenv(name_);
     }
   }
-  const char* name_;
+  const char *name_;
   bool had_ = false;
   std::string old_;
 };
@@ -143,7 +143,7 @@ TEST(SaveConfig, FailsCleanlyWithNowhereToWrite) {
   ScopedEnv home("HOME", nullptr);
   ScopedEnv appdata("APPDATA", nullptr);
   EXPECT_FALSE(pomo::save_config(Config{}));
-  EXPECT_EQ(pomo::load_config().focus_min, 25);  // still usable, just not persisted
+  EXPECT_EQ(pomo::load_config().focus_min, 25); // still usable, just not persisted
 }
 
 TEST(SaveConfig, RoundTripsThroughARealFile) {
@@ -163,6 +163,6 @@ TEST(SaveConfig, RoundTripsThroughARealFile) {
   std::filesystem::remove_all(dir);
 }
 
-#endif  // _WIN32
+#endif // _WIN32
 
-}  // namespace
+} // namespace

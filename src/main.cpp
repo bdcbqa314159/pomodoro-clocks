@@ -23,17 +23,17 @@ namespace {
 // 3x5 blocks, index 0-9, plus the colon at [10] (1 column wide).
 constexpr int kGlyphRows = 5;
 const std::vector<std::vector<std::string>> kGlyphs = {
-    {"███", "█ █", "█ █", "█ █", "███"},  // 0
-    {"  █", "  █", "  █", "  █", "  █"},  // 1
-    {"███", "  █", "███", "█  ", "███"},  // 2
-    {"███", "  █", "███", "  █", "███"},  // 3
-    {"█ █", "█ █", "███", "  █", "  █"},  // 4
-    {"███", "█  ", "███", "  █", "███"},  // 5
-    {"███", "█  ", "███", "█ █", "███"},  // 6
-    {"███", "  █", "  █", "  █", "  █"},  // 7
-    {"███", "█ █", "███", "█ █", "███"},  // 8
-    {"███", "█ █", "███", "  █", "███"},  // 9
-    {" ", "█", " ", "█", " "},            // 10 = colon
+    {"███", "█ █", "█ █", "█ █", "███"}, // 0
+    {"  █", "  █", "  █", "  █", "  █"}, // 1
+    {"███", "  █", "███", "█  ", "███"}, // 2
+    {"███", "  █", "███", "  █", "███"}, // 3
+    {"█ █", "█ █", "███", "  █", "  █"}, // 4
+    {"███", "█  ", "███", "  █", "███"}, // 5
+    {"███", "█  ", "███", "█ █", "███"}, // 6
+    {"███", "  █", "  █", "  █", "  █"}, // 7
+    {"███", "█ █", "███", "█ █", "███"}, // 8
+    {"███", "█ █", "███", "  █", "███"}, // 9
+    {" ", "█", " ", "█", " "},           // 10 = colon
 };
 
 /// Render mm:ss as five rows of block glyphs.
@@ -54,11 +54,14 @@ std::vector<std::string> big_time(int total_seconds) {
   return rows;
 }
 
-const char* label_of(pomo::Phase p) {
+const char *label_of(pomo::Phase p) {
   switch (p) {
-    case pomo::Phase::Focus: return "F O C U S";
-    case pomo::Phase::ShortBreak: return "S H O R T   B R E A K";
-    case pomo::Phase::LongBreak: return "L O N G   B R E A K";
+  case pomo::Phase::Focus:
+    return "F O C U S";
+  case pomo::Phase::ShortBreak:
+    return "S H O R T   B R E A K";
+  case pomo::Phase::LongBreak:
+    return "L O N G   B R E A K";
   }
   return "";
 }
@@ -67,21 +70,21 @@ const char* label_of(pomo::Phase p) {
 // ponytail: shell out. A UserNotifications binding needs a code-signed .app
 // bundle to deliver the same two lines, and CoreAudio needs a run loop.
 // Strings are compile-time constants, so there is nothing to inject here.
-void alert(const char* title, const char* body) {
+void alert(const char *title, const char *body) {
 #if defined(__APPLE__)
   const std::string cmd = std::string("osascript -e 'display notification \"") + body +
                           "\" with title \"" + title + "\" sound name \"Glass\"' " +
-                          ">/dev/null 2>&1 &";  // & — never block the render loop
+                          ">/dev/null 2>&1 &"; // & — never block the render loop
   (void)std::system(cmd.c_str());
 #else
   (void)title;
   (void)body;
-  std::fputs("\a", stdout);  // ponytail: terminal bell. Wire libnotify/PowerShell if you port.
+  std::fputs("\a", stdout); // ponytail: terminal bell. Wire libnotify/PowerShell if you port.
   std::fflush(stdout);
 #endif
 }
 
-}  // namespace
+} // namespace
 
 int main() {
   pomo::Timer timer{pomo::load_config()};
@@ -89,7 +92,7 @@ int main() {
 
   bool settings_open = false;
   bool saved_ok = true;
-  int field = 0;  // index into kFields
+  int field = 0; // index into kFields
 
   // Empty path == no home directory anywhere; say so rather than printing "".
   const auto cfg_path = pomo::config_path();
@@ -101,10 +104,10 @@ int main() {
                                      : "settings not saved - could not write " + cfg_path.string();
 
   struct Field {
-    const char* label;
+    const char *label;
     int pomo::Config::*member;
     int max;
-    const char* unit;
+    const char *unit;
   };
   // ponytail: ±/arrow stepping, not text entry — no cursor, no parse, no partial
   // state, and clamp_minutes already exists to bound it.
@@ -118,9 +121,9 @@ int main() {
 
   auto adjust = [&](int delta) {
     pomo::Config cfg = timer.config();
-    const Field& f = kFields[field];
+    const Field &f = kFields[field];
     cfg.*(f.member) = pomo::clamp_minutes(cfg.*(f.member) + delta, f.max);
-    timer.set_config(cfg);  // retimes (and stops) only if the current phase changed length
+    timer.set_config(cfg); // retimes (and stops) only if the current phase changed length
   };
 
   auto renderer = Renderer([&] {
@@ -148,7 +151,7 @@ int main() {
     const int secs = static_cast<int>((left.count() + 999) / 1000);
 
     Elements digits;
-    for (const auto& row : big_time(secs)) {
+    for (const auto &row : big_time(secs)) {
       digits.push_back(text(row) | color(accent));
     }
 
@@ -162,13 +165,12 @@ int main() {
     if (settings_open) {
       Elements rows;
       for (int i = 0; i < kFieldCount; ++i) {
-        const Field& f = kFields[i];
+        const Field &f = kFields[i];
         const bool on = (i == field);
         auto row = hbox({
             text(on ? " > " : "   "),
             text(f.label) | flex,
-            text(std::to_string(timer.config().*(f.member))) | align_right |
-                size(WIDTH, EQUAL, 4),
+            text(std::to_string(timer.config().*(f.member))) | align_right | size(WIDTH, EQUAL, 4),
             text(std::string(" ") + f.unit) | size(WIDTH, EQUAL, 4),
         });
         rows.push_back(on ? (row | bold | color(accent)) : (row | dim));
@@ -181,7 +183,7 @@ int main() {
                  text("up/down select   left/right adjust   esc close") | dim | hcenter,
                  text(config_location) | dim | hcenter,
              }) |
-             border | size(WIDTH, EQUAL, 52) | center;  // wide enough for the hint line
+             border | size(WIDTH, EQUAL, 52) | center; // wide enough for the hint line
     }
 
     Element save_warning = saved_ok ? filler() | size(HEIGHT, EQUAL, 0)
@@ -192,8 +194,8 @@ int main() {
                text("") | size(HEIGHT, EQUAL, 1),
                vbox(std::move(digits)) | hcenter,
                text("") | size(HEIGHT, EQUAL, 1),
-               gauge(1.0f - static_cast<float>(ratio)) | color(accent) |
-                   size(WIDTH, EQUAL, 34) | hcenter,
+               gauge(1.0f - static_cast<float>(ratio)) | color(accent) | size(WIDTH, EQUAL, 34) |
+                   hcenter,
                text("") | size(HEIGHT, EQUAL, 1),
                text(dots) | color(accent) | hcenter,
                text(timer.running() ? "running" : "paused") | dim | hcenter,
@@ -204,7 +206,7 @@ int main() {
            border | center;
   });
 
-  auto app = CatchEvent(renderer, [&](const Event& e) {
+  auto app = CatchEvent(renderer, [&](const Event &e) {
     const auto now = pomo::Clock::now();
 
     // Settings owns every key while it is open, so nothing here can also start
