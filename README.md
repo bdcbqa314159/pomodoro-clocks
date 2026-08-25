@@ -16,6 +16,19 @@ Trunk generates; no `.js` file is hand-written or maintained.
 
 `prototype/index.html` is the original HTML/JS version, kept as a reference.
 
+## Prerequisites
+
+Only what the flavour you want needs:
+
+| for | need |
+|---|---|
+| Terminal (C++) | CMake ≥ 3.21, Ninja, a C++20 compiler |
+| Desktop GUI (Rust) | a Rust toolchain |
+| Browser (Rust → WASM) | the above, plus `rustup target add wasm32-unknown-unknown` and `cargo install trunk` |
+
+Everything else — FTXUI, GoogleTest, egui — is fetched by the build. Nothing to install by hand,
+and nothing installed globally.
+
 ## Install
 
 ```sh
