@@ -191,19 +191,28 @@ impl eframe::App for PomodoroApp {
                     let buttons = 3.0f32.mul_add(96.0, 16.0);
                     ui.add_space(((ui.available_width() - buttons) * 0.5).max(0.0));
                     if ui
-                        .add_sized([96.0, 30.0], egui::Button::new(if self.timer.running() {
-                            "Pause"
-                        } else {
-                            "Start"
-                        }))
+                        .add_sized(
+                            [96.0, 30.0],
+                            egui::Button::new(if self.timer.running() {
+                                "Pause"
+                            } else {
+                                "Start"
+                            }),
+                        )
                         .clicked()
                     {
                         self.toggle(now);
                     }
-                    if ui.add_sized([80.0, 30.0], egui::Button::new("Reset")).clicked() {
+                    if ui
+                        .add_sized([80.0, 30.0], egui::Button::new("Reset"))
+                        .clicked()
+                    {
                         self.timer.reset();
                     }
-                    if ui.add_sized([80.0, 30.0], egui::Button::new("Skip")).clicked() {
+                    if ui
+                        .add_sized([80.0, 30.0], egui::Button::new("Skip"))
+                        .clicked()
+                    {
                         self.timer.skip(now);
                     }
                 });

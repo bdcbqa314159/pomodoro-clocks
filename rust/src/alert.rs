@@ -75,14 +75,20 @@ fn chime(up: bool) {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn tone(ctx: &web_sys::AudioContext, freq: f32, at: f64, dur: f64) -> Result<(), wasm_bindgen::JsValue> {
+fn tone(
+    ctx: &web_sys::AudioContext,
+    freq: f32,
+    at: f64,
+    dur: f64,
+) -> Result<(), wasm_bindgen::JsValue> {
     let osc = ctx.create_oscillator()?;
     let gain = ctx.create_gain()?;
     osc.set_type(web_sys::OscillatorType::Sine);
     osc.frequency().set_value(freq);
     gain.gain().set_value_at_time(0.0, at)?;
     gain.gain().linear_ramp_to_value_at_time(0.22, at + 0.02)?;
-    gain.gain().exponential_ramp_to_value_at_time(0.0001, at + dur)?;
+    gain.gain()
+        .exponential_ramp_to_value_at_time(0.0001, at + dur)?;
     osc.connect_with_audio_node(&gain)?;
     gain.connect_with_audio_node(&ctx.destination())?;
     osc.start_with_when(at)?;

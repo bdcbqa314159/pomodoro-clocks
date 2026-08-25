@@ -14,10 +14,25 @@ CMakeUserPresets.json
 # loose compiled artifacts
 *.o
 *.a
+*.so
 *.dylib
+*.dll
+*.exe
+*.pdb
 *.dSYM/
 *.profraw
 *.profdata
+
+# secrets
+# GOTCHA: .gitignore has NO inline comments. `*.key  # private` matches nothing —
+# it becomes the literal pattern "*.key  # private". Comments go on their own line.
+*.key
+*.pem
+*.p12
+.env
+.env.*
+credentials
+*.secret
 
 # personal / local tooling
 .venv/

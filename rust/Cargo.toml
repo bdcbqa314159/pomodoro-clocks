@@ -2,6 +2,9 @@
 name = "pomodoro"
 version = "0.1.0"
 edition = "2021"
+description = "A pomodoro timer — native GUI and browser, one egui codebase"
+license = "MIT"
+authors = ["Bernardo Cohen"]
 
 # One crate, two targets: `cargo run` builds the native GUI, `trunk build`
 # builds the same app to WASM. src/app.rs is shared verbatim.

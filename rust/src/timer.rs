@@ -80,7 +80,7 @@ pub fn phase_after(current: Phase, completed: u32, rounds: u32) -> Phase {
     if current != Phase::Focus {
         return Phase::Focus;
     }
-    if rounds > 0 && completed % rounds == 0 {
+    if rounds > 0 && completed.is_multiple_of(rounds) {
         Phase::LongBreak
     } else {
         Phase::ShortBreak
